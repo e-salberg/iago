@@ -1,5 +1,4 @@
-require('dotenv').config();
-
+const token = require('./config/json');
 const fetch = require("node-fetch");
 const { Client, IntentsBitField } = require('discord.js');
 const client = new Client({
@@ -25,10 +24,7 @@ client.on("ready", () => {
 });
 
 client.on("messageCreate", msg => {
-    if (msg.author.bot) {
-        return;
-    }
-    //console.log(msg);
+    if (msg.author.bot) return;
 
     if (msg.content === "!q") {
         getQuote().then(quote => msg.channel.send(quote))
@@ -43,4 +39,4 @@ client.on("messageCreate", msg => {
     }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(token);
