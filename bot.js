@@ -1,41 +1,40 @@
-const token = require('./config/json');
-const fetch = require("node-fetch");
-const { Client, IntentsBitField } = require('discord.js');
+const fs = require('node:fs')
+const path = require('node:path')
+const { token } = require('./config.json');
+const { Client, Collection, IntentsBitField } = require('discord.js');
 const client = new Client({
     intents: [IntentsBitField.Flags.Guilds, IntentsBitField.Flags.GuildMessages, IntentsBitField.Flags.MessageContent]
 });
 
-const sadWords = ["sad", "depressed", "unhappy", "angry", "miserable", "tilt", "smurf"];
+client.commands = new Collection();
+const commnadsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commnadsPath).filter(file => file.endsWith('.js'));
 
-const encouragementMsg = "keep it pma, keep it bsj";
-
-function getQuote() {
-    return fetch("https://zenquotes.io/api/random")
-        .then(res => {
-            return res.json()
-        })
-        .then(data => {
-            return data[0]["q"] + " -" + data[0]["a"]
-        })
+for (const file of commandFiles) {
+    const filePath = path.join(commnadsPath, file);
+    const command = require(filePath);
+    client.commands.set(command.data.name, command);
 }
 
-client.on("ready", () => {
+//const sadWords = ["sad", "depressed", "unhappy", "angry", "miserable", "tilt", "smurf"];
+//const encouragementMsg = "keep it pma, keep it bsj";
+
+client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`) 
 });
 
-client.on("messageCreate", msg => {
-    if (msg.author.bot) return;
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
 
-    if (msg.content === "!q") {
-        getQuote().then(quote => msg.channel.send(quote))
-    }
+    const command = interaction.client.commands.get(interaction.commandName)
 
-    if (sadWords.some(word => msg.content.includes(word))) {
-        msg.reply(encouragementMsg);
-    }
+    if (!command) return;
 
-    if (msg.content === "ping") {
-        msg.channel.send("pong");
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
     }
 });
 
